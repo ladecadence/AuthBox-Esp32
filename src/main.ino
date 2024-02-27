@@ -1,25 +1,30 @@
 #define LOCK_PIN    12
+#define CLOSED_PIN  14
 #define PWM_PIN     4
-#define PWM_STEPS   1024
 
 #define PWM_CHANNEL 0
 #define PWM_RES     10
+#define PWM_STEPS   1024
 #define PWM_FREQ    5000
 
 #define OPEN_DELAY  3000
 
+#define CMD_OPEN    'O'
+#define CMD_STATUS  'S'
+
+// vars
+int opening = 0;
 int opened = 0;
 uint32_t last_millis;
-// The R value in the graph equation
-float r;
-int brightness = 700;
+float r;                // The R value in the graph equation
+int brightness;         // actual pwm value
+int interval = 700;     // animation position
 
 void setup() {
-
   // configure GPIO
   pinMode(LOCK_PIN, OUTPUT);
+  pinMode(CLOSED_PIN, INPUT_PULLUP);
   digitalWrite(LOCK_PIN, LOW);
-
 
   // serial
   Serial.begin(115200);
@@ -27,11 +32,15 @@ void setup() {
   // configure ESP32 PWM
   ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RES);
   ledcAttachPin(PWM_PIN, PWM_CHANNEL);
-  
 
-  // Calculate the R variable (only needs to be done once at setup)
+
+  // Calculate the R variable for more linear brightness
+  // (only needs to be done once at setup)
   r = (PWM_STEPS * log10(2))/(log10(PWM_STEPS));
-
+  // initial brightness
+  brightness = pow (2, (interval / r)) - 1;
+  ledcWrite(PWM_CHANNEL, brightness);
+  
   Serial.println("Started!");
 }
 
@@ -39,44 +48,36 @@ void loop() {
   // animation delay
   delay(5);
 
-  // run animation
-  // TODO
-
-
   // check serial commands
   if (Serial.available() > 0) {
     uint8_t c = Serial.read();
 
-    if (c == 'O') {
+    if (c == CMD_OPEN) {
       Serial.println("Opening...");
       digitalWrite(LOCK_PIN, HIGH);
-      opened = 1;
+      opening = 1;
       last_millis = millis();
     }
   }
 
   // check if we need to release the lock
-  if (opened && (millis() - last_millis > OPEN_DELAY)) {
+  if (opening && (millis() - last_millis > OPEN_DELAY)) {
     Serial.println("Releasing lock...");
     digitalWrite(LOCK_PIN, LOW);
-    opened = 0;
+    opening = 0;
   }
 
-/* for (int interval = 700; interval <= PWM_STEPS; interval++) { */
-  /*     // Calculate the required PWM value for this interval step */
-  /*     brightness = pow (2, (interval / r)) - 1; */
-  /*     // Set the LED output to the calculated brightness */
-  /*     ledcWrite(PWM_CHANNEL, brightness); */
-  /*     delay(5); */
-  /* } */
-  /* for (int interval = PWM_STEPS; interval >= 700; interval--) { */
-  /*     // Calculate the required PWM value for this interval step */
-  /*     brightness = pow (2, (interval / r)) - 1; */
-  /*     // Set the LED output to the calculated brightness */
-  /*     ledcWrite(PWM_CHANNEL, brightness); */
-  /*     delay(5); */
-  /* } */
-  /* delay(3000); */
-  
+  // animate lights?
+  if (opened == 1) {
+    if (interval < PWM_STEPS) {
+      interval++;
+      brightness = pow (2, (interval / r)) - 1;
+      ledcWrite(PWM_CHANNEL, brightness);
+    }
+  }
+
+  // TODO check for lock sensor and dim the lights
+  // when closed  
+  opened = digitalRead(CLOSED_PIN);
   
 }
