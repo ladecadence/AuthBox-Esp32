@@ -1,7 +1,11 @@
 // GPIO
-#define LOCK_PIN    12
-#define CLOSED_PIN  14
-#define PWM_PIN     4
+#define LOCK_PIN    18
+#define CLOSED_PIN  19
+#define PWM_PIN     23
+
+// SERIAL
+#define SERIAL2_TX  12
+#define SERIAL2_RX  13
 
 // PWM
 #define PWM_CHANNEL 0
@@ -34,6 +38,7 @@ void setup() {
 
   // serial
   Serial.begin(115200);
+  Serial2.begin(115200, SERIAL_8N1, SERIAL2_RX, SERIAL2_TX);
   
   // configure ESP32 PWM
   ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RES);
@@ -55,8 +60,8 @@ void loop() {
   delay(5);
 
   // check serial commands
-  if (Serial.available() > 0) {
-    uint8_t c = Serial.read();
+  if (Serial2.available() > 0) {
+    uint8_t c = Serial2.read();
 
     if (c == CMD_OPEN) {
       Serial.println("Opening...");
@@ -65,7 +70,7 @@ void loop() {
       last_millis = millis();
     }
     if (c == CMD_STATUS) {
-      Serial.println(closed ? 'C' : 'O');
+      Serial2.println(closed ? 'C' : 'O');
     }
   }
 
