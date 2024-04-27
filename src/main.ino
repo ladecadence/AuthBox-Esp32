@@ -1,6 +1,6 @@
 // GPIO
-#define LOCK_PIN    18
-#define CLOSED_PIN  19
+#define CLOSED_PIN  18
+#define LOCK_PIN    19
 #define PWM_PIN     23
 
 // SERIAL
